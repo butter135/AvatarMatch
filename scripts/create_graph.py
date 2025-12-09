@@ -2,14 +2,15 @@ from itertools import combinations
 
 import pandas as pd
 import networkx as nx
+import numpy as np
 from pyvis.network import Network
 from collections import Counter
 
 def load_dummy():
-    df = pd.read_csv("dummy.csv")
+    df = pd.read_csv("avatar_dummy_100.csv")
     responses = []
 
-    for attrs in df ["attributes"]:
+    for attrs in df ["以下の特徴タグから、「好き」「魅力を感じる」と思うものを最大5つ選んでください"]:
         attr_list = [a.strip() for a in str(attrs).split(",") if a.strip()]
         responses.append(attr_list)
 
@@ -26,15 +27,31 @@ def create_cooccurrence_graph(responses):
         for a, b in combinations(sorted(user_attrs), 2):
             cooc[(a, b)] += 1
 
+    max_population = max(popularity.values())
+    min_population = min(popularity.values())
+    threshold = np.percentile(list(cooc.values()), 60)
+    strong_edges = {pair: w for pair, w in cooc.items() if w > threshold}
+    w_min = min(strong_edges.values())
+    w_max = max(strong_edges.values())
+
     graph = nx.Graph()
 
     # add node
     for attr, count in popularity.items():
-        graph.add_node(attr, size=count)
+        if max_population == min_population:
+            norm = 0.5
+        else:
+            norm = (count - min_population) / (max_population - min_population)
+        graph.add_node(attr, size = (3 + norm * 30))
 
     #add edge
-    for (a, b), w in cooc.items():
-        graph.add_edge(a, b, weight = w)
+    for (a, b), w in strong_edges.items():
+        if w_max == w_min:
+            norm = 0.5
+        else:
+            norm = (w - w_min) / (w_max - w_min)
+
+        graph.add_edge(a, b, weight = w, width = (2 + (norm ** 1.5) * 50))
 
     return graph
 
@@ -51,6 +68,9 @@ def export_html(graph):
     for edge in net.edges:
         if "weight" in edge:
             edge["width"] = edge["weight"]
+
+    net.toggle_physics(False)
+
 
     # HTML 出力
     net.save_graph("network.html")
