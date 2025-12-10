@@ -34,5 +34,5 @@ load_dotenv("keys/.env")
 download_sheet_as_csv(
     service_account_json=os.getenv("SERVICE_ACCOUNT_JSON"),
     spreadsheet_id=os.getenv("SHEET_ID"),
-    out_path="../csv/avatar_match.csv"
+    out_path="./csv/avatar_match.csv"
 )

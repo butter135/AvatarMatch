@@ -51,7 +51,7 @@ class CreateGraph:
             else:
                 norm = (count - min_population) / (max_population - min_population)
             color = norm_color(norm)
-            graph.add_node(attr, label = f"{attr} ({norm})", shape = "box", color = { "background" : color, "border" : "#1e1e1e"})
+            graph.add_node(attr, label = f"{attr} ({round(norm, 2)})", shape = "box", color = { "background" : color, "border" : "#1e1e1e"})
 
         #add edge
         for (a, b), w in strong_edges.items():
@@ -90,9 +90,9 @@ class CreateGraph:
         """)
 
         # HTML 出力
-        net.save_graph("./pages/network.html")
+        net.save_graph("./docs/network.html")
 
-        with open("./pages/network.html", "r", encoding="utf-8") as f:
+        with open("./docs/network.html", "r", encoding="utf-8") as f:
             htmlfile = f.read()
 
         # 追加する CSS + DIV
@@ -140,7 +140,7 @@ class CreateGraph:
         # </body> の直前に差し込む
         htmlfile = htmlfile.replace("</body>", legend_html + "\n</body>")
 
-        with open("./pages/network.html", "w", encoding="utf-8") as f:
+        with open("./docs/network.html", "w", encoding="utf-8") as f:
             f.write(htmlfile)
         print(f"network.html を生成しました")
 
