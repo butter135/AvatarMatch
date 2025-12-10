@@ -4,14 +4,12 @@ import pandas as pd
 import networkx as nx
 import numpy as np
 import colorsys
-import plotly.graph_objs as go
-from plotly.offline import plot
 from pyvis.network import Network
 from collections import Counter
 
 class CreateGraph:
     def load_dummy(self):
-        df = pd.read_csv("avatar_dummy_100.csv")
+        df = pd.read_csv("./csv/avatar_match.csv")
         responses = []
 
         for _, row in df.iterrows():
@@ -38,8 +36,11 @@ class CreateGraph:
         min_population = min(popularity.values())
         threshold = np.percentile(list(cooc.values()), 70)
         strong_edges = {pair: w for pair, w in cooc.items() if w > threshold}
-        w_min = min(strong_edges.values())
-        w_max = max(strong_edges.values())
+        if strong_edges:
+            w_min = min(strong_edges.values())
+            w_max = max(strong_edges.values())
+        else:
+            w_min = w_max = 1
 
         graph = nx.Graph()
 
@@ -50,7 +51,7 @@ class CreateGraph:
             else:
                 norm = (count - min_population) / (max_population - min_population)
             color = norm_color(norm)
-            graph.add_node(attr, label = f"{attr} ({count}人)", shape = "box", color = { "background" : color, "border" : "#1e1e1e"})
+            graph.add_node(attr, label = f"{attr} ({norm})", shape = "box", color = { "background" : color, "border" : "#1e1e1e"})
 
         #add edge
         for (a, b), w in strong_edges.items():
@@ -89,9 +90,9 @@ class CreateGraph:
         """)
 
         # HTML 出力
-        net.save_graph("network.html")
+        net.save_graph("./pages/network.html")
 
-        with open("network.html", "r", encoding="utf-8") as f:
+        with open("./pages/network.html", "r", encoding="utf-8") as f:
             htmlfile = f.read()
 
         # 追加する CSS + DIV
@@ -139,85 +140,9 @@ class CreateGraph:
         # </body> の直前に差し込む
         htmlfile = htmlfile.replace("</body>", legend_html + "\n</body>")
 
-        with open("network.html", "w", encoding="utf-8") as f:
+        with open("./pages/network.html", "w", encoding="utf-8") as f:
             f.write(htmlfile)
         print(f"network.html を生成しました")
-
-    def export_html_3d(graph, filename="network_3d.html"):
-        # 3次元レイアウト（バネレイアウトの3D版）
-        pos = nx.spring_layout(graph, dim=3, seed=42)  # seed 固定で毎回同じ配置に
-
-        # --- ノード座標・見た目 ---
-        node_x = []
-        node_y = []
-        node_z = []
-        node_text = []
-        node_size = []
-
-        for node, data in graph.nodes(data=True):
-            x, y, z = pos[node]
-            node_x.append(x)
-            node_y.append(y)
-            node_z.append(z)
-            node_text.append(node)                 # ホバーに名前表示
-            node_size.append(data.get("size", 10)) # さっきの size をそのまま利用
-
-        node_trace = go.Scatter3d(
-            x=node_x,
-            y=node_y,
-            z=node_z,
-            mode="markers+text",
-            text=node_text,
-            textposition="top center",
-            hoverinfo="text",
-            marker=dict(
-                size=node_size,
-                opacity=0.9
-            )
-        )
-
-        # --- エッジ座標・見た目 ---
-        edge_traces = []
-
-        for u, v, data in graph.edges(data=True):
-            x0, y0, z0 = pos[u]
-            x1, y1, z1 = pos[v]
-
-            color = data.get("color", "rgba(200,200,200,0.5)")
-            width = data.get("width", 1.0)
-
-            # エッジ1本につき1トレース（色・太さ個別指定したいので）
-            edge_traces.append(
-                go.Scatter3d(
-                    x=[x0, x1],
-                    y=[y0, y1],
-                    z=[z0, z1],
-                    mode="lines",
-                    hoverinfo="none",
-                    line=dict(
-                        width=width / 10,  # そのままだと太すぎるのでスケールダウン
-                        color=color
-                    )
-                )
-            )
-
-        # --- 図をまとめる ---
-        fig = go.Figure(
-            data=edge_traces + [node_trace],
-            layout=go.Layout(
-                title="Avatar Tag Network (3D)",
-                showlegend=False,
-                scene=dict(
-                    xaxis=dict(showbackground=False, showgrid=False, zeroline=False, showticklabels=False),
-                    yaxis=dict(showbackground=False, showgrid=False, zeroline=False, showticklabels=False),
-                    zaxis=dict(showbackground=False, showgrid=False, zeroline=False, showticklabels=False),
-                ),
-                margin=dict(l=0, r=0, b=0, t=30)
-            )
-        )
-
-        plot(fig, filename=filename, auto_open=False)
-        print(f"{filename} を生成しました")
 
     def run(self):
         responses = self.load_dummy()

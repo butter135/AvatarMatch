@@ -1,6 +1,7 @@
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 import os
+from dotenv import load_dotenv
 
 def download_sheet_as_csv(
         service_account_json: str,
@@ -27,3 +28,11 @@ def download_sheet_as_csv(
 
     print(f"Downloaded: {out_path}")
     return out_path
+
+load_dotenv("keys/.env")
+
+download_sheet_as_csv(
+    service_account_json=os.getenv("SERVICE_ACCOUNT_JSON"),
+    spreadsheet_id=os.getenv("SHEET_ID"),
+    out_path="../csv/avatar_match.csv"
+)
