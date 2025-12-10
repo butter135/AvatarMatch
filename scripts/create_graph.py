@@ -3,80 +3,236 @@ from itertools import combinations
 import pandas as pd
 import networkx as nx
 import numpy as np
+import colorsys
+import plotly.graph_objs as go
+from plotly.offline import plot
 from pyvis.network import Network
 from collections import Counter
 
-def load_dummy():
-    df = pd.read_csv("avatar_dummy_100.csv")
-    responses = []
+class CreateGraph:
+    def load_dummy(self):
+        df = pd.read_csv("avatar_dummy_100.csv")
+        responses = []
 
-    for attrs in df ["以下の特徴タグから、「好き」「魅力を感じる」と思うものを最大5つ選んでください"]:
-        attr_list = [a.strip() for a in str(attrs).split(",") if a.strip()]
-        responses.append(attr_list)
+        for _, row in df.iterrows():
+            height = str(row["好みの身長タイプを教えて下さい"]).strip()
+            attrs = row["以下の特徴タグから、「好き」「魅力を感じる」と思うものを最大5つ選んでください"]
+            attr_list = [a.strip() for a in str(attrs).split(",") if a.strip()]
+            merged = [height] + attr_list
+            responses.append(merged)
 
-    return responses
+        return responses
 
-def create_cooccurrence_graph(responses):
-    # nord size
-    all_attrs = [attr for user_attrs in responses for attr in user_attrs]
-    popularity = Counter(all_attrs)
+    def create_cooccurrence_graph(self, responses):
+        # nord size
+        all_attrs = [attr for user_attrs in responses for attr in user_attrs]
+        popularity = Counter(all_attrs)
 
-    # edge size
-    cooc = Counter()
-    for user_attrs in responses:
-        for a, b in combinations(sorted(user_attrs), 2):
-            cooc[(a, b)] += 1
+        # edge size
+        cooc = Counter()
+        for user_attrs in responses:
+            for a, b in combinations(sorted(user_attrs), 2):
+                cooc[(a, b)] += 1
 
-    max_population = max(popularity.values())
-    min_population = min(popularity.values())
-    threshold = np.percentile(list(cooc.values()), 60)
-    strong_edges = {pair: w for pair, w in cooc.items() if w > threshold}
-    w_min = min(strong_edges.values())
-    w_max = max(strong_edges.values())
+        max_population = max(popularity.values())
+        min_population = min(popularity.values())
+        threshold = np.percentile(list(cooc.values()), 70)
+        strong_edges = {pair: w for pair, w in cooc.items() if w > threshold}
+        w_min = min(strong_edges.values())
+        w_max = max(strong_edges.values())
 
-    graph = nx.Graph()
+        graph = nx.Graph()
 
-    # add node
-    for attr, count in popularity.items():
-        if max_population == min_population:
-            norm = 0.5
-        else:
-            norm = (count - min_population) / (max_population - min_population)
-        graph.add_node(attr, size = (3 + norm * 30))
+        # add node
+        for attr, count in popularity.items():
+            if max_population == min_population:
+                norm = 0.5
+            else:
+                norm = (count - min_population) / (max_population - min_population)
+            color = norm_color(norm)
+            graph.add_node(attr, label = f"{attr} ({count}人)", shape = "box", color = { "background" : color, "border" : "#1e1e1e"})
 
-    #add edge
-    for (a, b), w in strong_edges.items():
-        if w_max == w_min:
-            norm = 0.5
-        else:
-            norm = (w - w_min) / (w_max - w_min)
+        #add edge
+        for (a, b), w in strong_edges.items():
+            if w_max == w_min:
+                norm = 0.5
+            else:
+                norm = (w - w_min) / (w_max - w_min)
+            color = norm_color(norm)
+            graph.add_edge(a, b, weight = w, width = (2 + norm * 50), color = color)
 
-        graph.add_edge(a, b, weight = w, width = (2 + (norm ** 1.5) * 50))
+        return graph
 
-    return graph
+    def export_html(self, graph):
+        net = Network(height = "700px", width = "100%", bgcolor = "#c2e1ff", font_color = "#1e1e1e")
+        net.from_nx(graph)
 
-def export_html(graph):
-    net = Network(height = "700px", width = "100%", bgcolor = "#1e1e1e", font_color = "white")
-    net.from_nx(graph)
+        # ノードサイズ調整
+        for node in net.nodes:
+            if "size" in node:
+                node["value"] = node["size"]
 
-    # ノードサイズ調整
-    for node in net.nodes:
-        if "size" in node:
-            node["value"] = node["size"]
+        net.toggle_physics(False)
 
-    # エッジ太さ調整
-    for edge in net.edges:
-        if "weight" in edge:
-            edge["width"] = edge["weight"]
+        net.set_options("""
+        {
+            "physics": {
+                "enabled": true,
+                "barnesHut": {
+                    "gravitationalConstant": -2000,
+                    "centralGravity": 0.3,
+                    "springLength": 300,
+                    "springConstant": 0.005
+                }
+            }
+        }
+        """)
 
-    net.toggle_physics(False)
+        # HTML 出力
+        net.save_graph("network.html")
+
+        with open("network.html", "r", encoding="utf-8") as f:
+            htmlfile = f.read()
+
+        # 追加する CSS + DIV
+        legend_html = """
+        <style>
+        .color-legend {
+        width: 60%;
+        height: 20px;
+        margin: 20px auto;
+        border-radius: 4px;
+        background: linear-gradient(to right,
+        rgb(255, 255, 255),
+        rgb(255, 0, 0)
+        );
+        border: 1px solid #1e1e1e;
+        }
+        .legend-labels {
+        width: 60%;
+        margin: 0 auto;
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: #333;
+        }
+        </style>
+
+        <div class="color-legend"></div>
+        <div class="legend-labels">
+        <span>低頻度</span>
+        <span>高頻度</span>
+        </div>
+        <div class="legend-description" style="
+        width: 60%;
+        margin: 20px auto 30px auto;
+        font-size: 13px;
+        color: #444;
+        text-align: center;
+        line-height: 1.5;
+        ">
+        ノードの色は、その特徴がどれくらいの人に選ばれたかを表しています。</br>
+        エッジの色や太さは、2つの特徴が同じ回答の中で一緒に選ばれた頻度を示します。
+        </div>
+        """
+
+        # </body> の直前に差し込む
+        htmlfile = htmlfile.replace("</body>", legend_html + "\n</body>")
+
+        with open("network.html", "w", encoding="utf-8") as f:
+            f.write(htmlfile)
+        print(f"network.html を生成しました")
+
+    def export_html_3d(graph, filename="network_3d.html"):
+        # 3次元レイアウト（バネレイアウトの3D版）
+        pos = nx.spring_layout(graph, dim=3, seed=42)  # seed 固定で毎回同じ配置に
+
+        # --- ノード座標・見た目 ---
+        node_x = []
+        node_y = []
+        node_z = []
+        node_text = []
+        node_size = []
+
+        for node, data in graph.nodes(data=True):
+            x, y, z = pos[node]
+            node_x.append(x)
+            node_y.append(y)
+            node_z.append(z)
+            node_text.append(node)                 # ホバーに名前表示
+            node_size.append(data.get("size", 10)) # さっきの size をそのまま利用
+
+        node_trace = go.Scatter3d(
+            x=node_x,
+            y=node_y,
+            z=node_z,
+            mode="markers+text",
+            text=node_text,
+            textposition="top center",
+            hoverinfo="text",
+            marker=dict(
+                size=node_size,
+                opacity=0.9
+            )
+        )
+
+        # --- エッジ座標・見た目 ---
+        edge_traces = []
+
+        for u, v, data in graph.edges(data=True):
+            x0, y0, z0 = pos[u]
+            x1, y1, z1 = pos[v]
+
+            color = data.get("color", "rgba(200,200,200,0.5)")
+            width = data.get("width", 1.0)
+
+            # エッジ1本につき1トレース（色・太さ個別指定したいので）
+            edge_traces.append(
+                go.Scatter3d(
+                    x=[x0, x1],
+                    y=[y0, y1],
+                    z=[z0, z1],
+                    mode="lines",
+                    hoverinfo="none",
+                    line=dict(
+                        width=width / 10,  # そのままだと太すぎるのでスケールダウン
+                        color=color
+                    )
+                )
+            )
+
+        # --- 図をまとめる ---
+        fig = go.Figure(
+            data=edge_traces + [node_trace],
+            layout=go.Layout(
+                title="Avatar Tag Network (3D)",
+                showlegend=False,
+                scene=dict(
+                    xaxis=dict(showbackground=False, showgrid=False, zeroline=False, showticklabels=False),
+                    yaxis=dict(showbackground=False, showgrid=False, zeroline=False, showticklabels=False),
+                    zaxis=dict(showbackground=False, showgrid=False, zeroline=False, showticklabels=False),
+                ),
+                margin=dict(l=0, r=0, b=0, t=30)
+            )
+        )
+
+        plot(fig, filename=filename, auto_open=False)
+        print(f"{filename} を生成しました")
+
+    def run(self):
+        responses = self.load_dummy()
+        graph = self.create_cooccurrence_graph(responses)
+        self.export_html(graph)
 
 
-    # HTML 出力
-    net.save_graph("network.html")
-    print(f"network.html を生成しました")
+def norm_rgb(norm) -> str:
+        r = 255
+        g = int(255 * (1 - norm))
+        b = int(255 * (1 - norm))
+        return f"rgb({r},{g},{b})"
 
+def norm_color(norm):
+        r, g, b = colorsys.hsv_to_rgb(0, norm, 1.0)
+        return f"rgb({int(r*255)}, {int(g*255)}, {int(b*255)})"
 
-responses = load_dummy()
-graph = create_cooccurrence_graph(responses)
-export_html(graph)
+CreateGraph().run()
