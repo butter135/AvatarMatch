@@ -1,4 +1,3 @@
-from scripts import download_csv, create_graph, auto_push
 from scripts.auto_push import AutoPush
 from scripts.create_graph import CreateGraph
 from scripts.download_csv import Downloader

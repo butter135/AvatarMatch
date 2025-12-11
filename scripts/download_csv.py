@@ -4,7 +4,7 @@ import os
 
 class Downloader:
     def __init__(self, repo_root) -> None:
-        self.outpath = (repo_root / "csv" / "vatar_match.csv")
+        self.outpath = (repo_root / "csv" / "avatar_match.csv")
         self.account_path = (repo_root / "keys" / str(os.getenv("SERVICE_ACCOUNT_JSON")))
 
     def download_sheet_as_csv(self):
