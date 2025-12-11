@@ -160,4 +160,3 @@ def norm_color(norm):
         r, g, b = colorsys.hsv_to_rgb(0, norm, 1.0)
         return f"rgb({int(r*255)}, {int(g*255)}, {int(b*255)})"
 
-CreateGraph().run()

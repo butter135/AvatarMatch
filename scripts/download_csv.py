@@ -3,36 +3,29 @@ from googleapiclient.discovery import build
 import os
 from dotenv import load_dotenv
 
-def download_sheet_as_csv(
-        service_account_json: str,
-        spreadsheet_id: str,
-        gid: int = 0,
-        out_path: str = "latest.csv"
-):
-    # 認証
-    creds = service_account.Credentials.from_service_account_file(
-        service_account_json,
-        scopes=["https://www.googleapis.com/auth/drive.readonly"]
-    )
+class Downloader:
+    def download_sheet_as_csv(self):
+        outpath = "./csv/avatar_match.csv"
+        load_dotenv("keys/.env")
 
-    drive = build("drive", "v3", credentials=creds)
+        # 認証
+        creds = service_account.Credentials.from_service_account_file(
+            os.getenv("SERVICE_ACCOUNT_JSON"),
+            scopes=["https://www.googleapis.com/auth/drive.readonly"]
+        )
 
-    export_mime = "text/csv"
+        drive = build("drive", "v3", credentials=creds)
 
-    file_id = spreadsheet_id
-    request = drive.files().export_media(fileId=file_id, mimeType=export_mime)
-    data = request.execute()
+        export_mime = "text/csv"
 
-    with open(out_path, "wb") as f:
-        f.write(data)
+        file_id = os.getenv("SHEET_ID")
+        request = drive.files().export_media(fileId=file_id, mimeType=export_mime)
+        data = request.execute()
 
-    print(f"Downloaded: {out_path}")
-    return out_path
+        with open(outpath, "wb") as f:
+            f.write(data)
 
-load_dotenv("keys/.env")
+        print(f"Downloaded: {outpath}")
+        return outpath
 
-download_sheet_as_csv(
-    service_account_json=os.getenv("SERVICE_ACCOUNT_JSON"),
-    spreadsheet_id=os.getenv("SHEET_ID"),
-    out_path="./csv/avatar_match.csv"
-)
+Downloader().download_sheet_as_csv()
