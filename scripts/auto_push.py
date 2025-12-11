@@ -4,16 +4,8 @@ from pathlib import Path
 import sys
 
 class AutoPush:
-    def __init__(self) -> None:
-        # このファイルの位置から .git を上に辿って探す
-        self.repo_root = self._find_repo_root()
-
-    def _find_repo_root(self) -> Path:
-        p = Path(__file__).resolve()
-        for parent in [p] + list(p.parents):
-            if (parent / ".git").exists():
-                return parent
-        raise RuntimeError(".git が見つかりませんでした")
+    def __init__(self, repo_root) -> None:
+        self.repo_root = repo_root
 
     def _run(self, cmd, cwd=None):
         """サブプロセス実行ヘルパー"""
@@ -62,9 +54,7 @@ class AutoPush:
         self._run(["git", "commit", "-m", msg])
 
         # push
-        self._run(["git", "push", "origin", "dev"])
+        self._run(["git", "push", "origin", "main"])
         print("push 完了！")
 
         return True
-
-AutoPush().push()

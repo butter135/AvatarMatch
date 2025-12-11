@@ -8,8 +8,11 @@ from pyvis.network import Network
 from collections import Counter
 
 class CreateGraph:
+    def __init__(self, repo_root) -> None:
+        self.csv_path = (repo_root / "csv" / "avatar_match.csv")
+        self.graph_path = str(repo_root / "docs" / "network.html")
     def load_dummy(self):
-        df = pd.read_csv("./csv/avatar_match.csv")
+        df = pd.read_csv(self.csv_path)
         responses = []
 
         for _, row in df.iterrows():
@@ -90,9 +93,9 @@ class CreateGraph:
         """)
 
         # HTML 出力
-        net.save_graph("./docs/network.html")
+        net.save_graph(self.graph_path)
 
-        with open("./docs/network.html", "r", encoding="utf-8") as f:
+        with open(self.graph_path, "r", encoding="utf-8") as f:
             htmlfile = f.read()
 
         # 追加する CSS + DIV
@@ -140,7 +143,7 @@ class CreateGraph:
         # </body> の直前に差し込む
         htmlfile = htmlfile.replace("</body>", legend_html + "\n</body>")
 
-        with open("./docs/network.html", "w", encoding="utf-8") as f:
+        with open(self.graph_path, "w", encoding="utf-8") as f:
             f.write(htmlfile)
         print(f"network.html を生成しました")
 

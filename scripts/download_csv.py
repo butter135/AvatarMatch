@@ -1,16 +1,16 @@
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 import os
-from dotenv import load_dotenv
 
 class Downloader:
-    def download_sheet_as_csv(self):
-        outpath = "./csv/avatar_match.csv"
-        load_dotenv("keys/.env")
+    def __init__(self, repo_root) -> None:
+        self.outpath = (repo_root / "csv" / "vatar_match.csv")
+        self.account_path = (repo_root / "keys" / str(os.getenv("SERVICE_ACCOUNT_JSON")))
 
+    def download_sheet_as_csv(self):
         # 認証
         creds = service_account.Credentials.from_service_account_file(
-            os.getenv("SERVICE_ACCOUNT_JSON"),
+            self.account_path,
             scopes=["https://www.googleapis.com/auth/drive.readonly"]
         )
 
@@ -22,10 +22,8 @@ class Downloader:
         request = drive.files().export_media(fileId=file_id, mimeType=export_mime)
         data = request.execute()
 
-        with open(outpath, "wb") as f:
+        with open(self.outpath, "wb") as f:
             f.write(data)
 
-        print(f"Downloaded: {outpath}")
-        return outpath
-
-Downloader().download_sheet_as_csv()
+        print(f"Downloaded: {self.outpath}")
+        return self.outpath
