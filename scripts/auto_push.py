@@ -54,7 +54,7 @@ class AutoPush:
         self._run(["git", "commit", "-m", msg])
 
         # push
-        self._run(["git", "push", "origin", "Pages"])
+        self._run(["git", "push", "origin", "main"])
         print("push 完了！")
 
         return True

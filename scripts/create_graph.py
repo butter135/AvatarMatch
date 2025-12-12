@@ -1,5 +1,5 @@
 from itertools import combinations
-
+import datetime
 import pandas as pd
 import networkx as nx
 import numpy as np
@@ -92,6 +92,8 @@ class CreateGraph:
         }
         """)
 
+        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
         # HTML 出力
         net.save_graph(self.graph_path)
 
@@ -99,9 +101,9 @@ class CreateGraph:
             htmlfile = f.read()
 
         # 追加する CSS + DIV
-        legend_html = """
+        legend_html = f"""
         <style>
-        .color-legend {
+        .color-legend {{
         width: 60%;
         height: 20px;
         margin: 20px auto;
@@ -111,15 +113,15 @@ class CreateGraph:
         rgb(255, 0, 0)
         );
         border: 1px solid #1e1e1e;
-        }
-        .legend-labels {
+        }}
+        .legend-labels {{
         width: 60%;
         margin: 0 auto;
         display: flex;
         justify-content: space-between;
         font-size: 12px;
         color: #333;
-        }
+        }}
         </style>
 
         <div class="color-legend"></div>
@@ -135,8 +137,10 @@ class CreateGraph:
         text-align: center;
         line-height: 1.5;
         ">
+        <b>最終更新日時[{now}]</b></br>
         ノードの色は、その特徴がどれくらいの人に選ばれたかを表しています。</br>
-        エッジの色や太さは、2つの特徴が同じ回答の中で一緒に選ばれた頻度を示します。
+        エッジの色や太さは、2つの特徴が同じ回答の中で一緒に選ばれた頻度を示します。</br>
+        <a href="https://docs.google.com/forms/d/e/1FAIpQLSfxQ6kSiMD_cHL5kEaMKI_k2iKhG18PRbCsoSENjb54kG6jow/viewform">アンケートの回答はこちらから</a>
         </div>
         """
 
